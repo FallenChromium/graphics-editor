@@ -42,7 +42,7 @@ function drawLineDDA(
     y = y + yIncrement;
     canvasCtx.lineTo(Math.round(x), Math.round(y));
     canvasCtx.moveTo(Math.round(x), Math.round(y));
-    debugArray.push({ x: Math.round(x), y: Math.round(y) });
+    debugArray.push({ x: Math.round(x), y: Math.round(y), z: 0, w: 0 });
   }
   canvasCtx.stroke();
   canvasCtx.closePath();
@@ -96,57 +96,67 @@ function drawLineBresenham(
   return { start, end, points };
 }
 
-function drawLineWu(
-  start: point,
-  end: point,
-  canvasCtx: CanvasRenderingContext2D
-): line {
-  // projections on the x and y axis
-  let dx = end.x - start.x;
-  let dy = end.y - start.y;
-  let steep = false;
-  let x = start.x;
-  let y = start.y;
-  const points: point[] = [];
-  const errors: number[][] = []
-  if (Math.abs(dy) > Math.abs(dx)) {
-    const temp = dx;
-    dx = dy;
-    dy = temp;
-    x = start.y
-    y = start.x
-    steep = true;
+function drawLineWu(start: Point, end: Point) {
+  const idealLine = new Line(endpoints.start, endpoints.end);
+  if (idealLine.angleToXAxis % 45 === 0) {
+      // значит, линия горизонтальная, вертикальная или диагональная
+      return this._ddaLine(endpoints);
   }
-  // in which direction should the coordinate change
-  const step_x = Math.sign(dx);
-  const step_y = Math.sign(dy);
-  // e = 1/2 + dy/dx; e * 2dx = 2dy - dx -> no division
-  let error = 2 * Math.abs(dy) - Math.abs(dx);
-  const previousColor = (canvasCtx.fillStyle as string)
-  for (let i = 0; i <= Math.abs(dx); i++) {
-    if (error >= 0) {
-      // add to secondary coordinate because the error indicates we should be "higher" 
-      // (actually depends on the direction of dy)
-      y = y + step_y;
-      error = error - 2 * Math.abs(dx);
-    }
-    // always add to main coordinate anyway
-    x = x + step_x;
-    error = error + 2 * Math.abs(dy);
-    const curPoint = { x: steep ? Math.round(y) : Math.round(x), y: steep ? Math.round(x) : Math.round(y) }
-    const positiveYBrightness =  (error + dx)/ (2*dx)
-    const negativeYBrightness = Math.min(1,1- positiveYBrightness)
-    canvasCtx.fillStyle = convertHexToRGBA(previousColor, negativeYBrightness)
-    canvasCtx.fillRect(curPoint.x, curPoint.y-1, 1, 1);
-    canvasCtx.fillStyle = convertHexToRGBA(previousColor, positiveYBrightness)
-    canvasCtx.fillRect(curPoint.x, curPoint.y, 1, 1);
-    points.push(curPoint);
-    errors.push([1- error/(2*dx), error/(2*dx)])
 
+  const points = [];
+
+  if (endpoints.start.x > endpoints.end.x) {
+      this._swapEndpoints(endpoints);
   }
-  console.log(errors)
-  canvasCtx.fillStyle = previousColor
-  return { start, end, points };
+  const [x_start, y_start, x_end, y_end] = this._mapEndpoints(endpoints);
+
+  const deltaX_raw = Math.abs(x_end - x_start);
+  const deltaY_raw = Math.abs(y_end - y_start);
+
+  const swapVariables = Math.abs(deltaY_raw / deltaX_raw) > 1;
+  const variableInfo = this._getDependentAndIndependentVariableInfo(endpoints, swapVariables);
+
+  let currIndependentVariableValue = variableInfo.independentStart;
+  let currDependentVariableValue = variableInfo.dependentStart;
+  let error = 0;
+  const deltaErr = variableInfo.deltaDependent / variableInfo.deltaIndependent;
+  for (
+      ;
+      currIndependentVariableValue != variableInfo.independentEnd;
+      currIndependentVariableValue += variableInfo.independentStep
+  ) {
+      const x = swapVariables ? currDependentVariableValue : currIndependentVariableValue;
+      const y = swapVariables ? currIndependentVariableValue : currDependentVariableValue;
+      const firstPointToDraw = new Point(x, y);
+      const secondPointToDraw = new Point(
+          swapVariables ? x + variableInfo.dependentStep : x,
+          swapVariables ? y : y + variableInfo.dependentStep
+      );
+      const intensity1 = Math.max(0, 1 - idealLine.distanceToPoint(firstPointToDraw));
+      const intensity2 = 1 - intensity1;
+      points.push({
+          x: firstPointToDraw.x,
+          y: firstPointToDraw.y,
+          opacity: intensity1
+      });
+      points.push({
+          x: secondPointToDraw.x,
+          y: secondPointToDraw.y,
+          opacity: intensity2
+      });
+
+      error += deltaErr;
+      // порог значения ошибки 1 нужен, так как в этом случае переход к следующему значению
+      // зависимой переменной должен осуществляться после того, как значение выражения
+      // currDependentVariableValue + error выходит за пределы следующего значения зависимой
+      // переменной (т.к. алгоритм рисует блоками высотой 2 пикселя)
+      if (error >= 1.5) {
+          currDependentVariableValue += variableInfo.dependentStep;
+          error -= 1;
+      }
+  }
+
+  return points;
 }
 
 export function lineMoveHandler(e: MouseEvent) {

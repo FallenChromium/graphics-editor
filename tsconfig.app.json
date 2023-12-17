@@ -9,6 +9,7 @@
     "src/**/__tests__/*"
   ],
   "compilerOptions": {
+    "lib": ["ESNext.Array", "ESNext", "dom"],
     "composite": true,
     "baseUrl": ".",
     "paths": {

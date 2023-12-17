@@ -49,10 +49,11 @@
 <script setup lang="ts">
 import ToolbarComponent from '@/components/ToolbarComponent/ToolbarComponent.vue';
 import CanvasComponent from '@/components/CanvasComponent/CanvasComponent.vue';
-import LineToolPane from '@/geometry/lines/LineToolPane.vue';
+import LineToolPane from '@/geometry/line/LineToolPane.vue';
 import { onMounted, ref, type Ref } from 'vue'
 import type { tool } from '@/components/ToolbarComponent/types';
-import { lineClickHandler } from '@/geometry/lines'
+import { lineClickHandler } from '@/geometry/line'
+import { ellipseClickHandler } from '@/geometry/bi_curves'
 import { useCanvasStore } from '@/stores/canvas'
 const canvasStore = useCanvasStore()
 const { setDrawingCtx, setPreviewCtx } = canvasStore
@@ -66,10 +67,19 @@ const tools: Array<tool> = [
         event: 'click', callback: lineClickHandler
       }]
   },
+  {
+    id: 3, name: 'Bi curves', icon: 'vector-ellipse', canvasCallbacks: [
+      { event: 'click', callback: ellipseClickHandler },
+    ]
+  },
+  {
+    id: 4, name: 'Rectangle', icon: 'rectangle', canvasCallbacks: [
+      { event: 'click', callback: () => {} },
+    ]
+  }
   // { id: 3, name: 'Paint Bucket', icon: 'format-color-fill', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
   // { id: 4, name: 'Crop', icon: 'crop', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
   // { id: 5, name: 'Eraser', icon: 'eraser', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
-  // { id: 6, name: 'Pen', icon: 'fountain-pen-tip', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
   // { id: 7, name: 'Shape', icon: 'shape', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
   // { id: 8, name: 'Text', icon: 'format-text', cursor: 'text', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] }
 ]
@@ -84,6 +94,11 @@ const documentWidth = ref(1920)
 const updateSelectedTool = (toolId: number) => {
   selectedTool.value = toolId
   cursor.value = tools[toolId].cursor || 'default'
+  for (const tool of tools) {
+    for (const callback of tool.canvasCallbacks) {
+      previewRef.value?.$el.removeEventListener(callback.event, callback.callback)
+    }
+  }
   for (const callback of tools[toolId].canvasCallbacks) {
     previewRef.value?.$el.addEventListener(callback.event, callback.callback)
   }

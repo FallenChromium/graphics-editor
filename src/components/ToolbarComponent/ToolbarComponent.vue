@@ -14,7 +14,7 @@
 
 <script setup lang="ts">
 import '@mdi/font/css/materialdesignicons.min.css'
-import type { tool } from './tools';
+import type { tool } from './types';
 
 const emits = defineEmits(['tool-changed', 'color-changed'])
 function selectedToolChanged(id: number) {

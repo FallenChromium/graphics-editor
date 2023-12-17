@@ -1,13 +1,12 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { drawingFunctionsTypes } from '@/geometry/lines'
-import type { point } from '@/geometry/types'
+import type { drawingFunctionsTypes } from '@/geometry/line'
 export const useLineStore = defineStore('line', () => {
   const isDrawing = ref(false)
-  const startPoint = ref<point>({ x: 0, y: 0 })
-  const algoType = ref<drawingFunctionsTypes>("DDA")
+  const startPoint = ref<{ x: number; y: number; z: number; w: number }>({ x: 0, y: 0, z: 0, w: 1 })
+  const algoType = ref<drawingFunctionsTypes>('DDA')
   function setStartPoint(x: number, y: number) {
-    startPoint.value = {x: x, y: y}
+    startPoint.value = { x: x, y: y, z: 0, w: 1 }
   }
   function toggleDrawing() {
     isDrawing.value = !isDrawing.value
@@ -16,5 +15,5 @@ export const useLineStore = defineStore('line', () => {
   function setAlgoType(algo: drawingFunctionsTypes) {
     algoType.value = algo
   }
-  return { isDrawing, startPoint, setStartPoint, toggleDrawing, algoType, setAlgoType, }
+  return { isDrawing, startPoint, setStartPoint, toggleDrawing, algoType, setAlgoType }
 })
