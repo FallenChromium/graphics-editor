@@ -1,0 +1,1 @@
+export interface CanvasCallback { event: string; callback: (event: MouseEvent) => void }
