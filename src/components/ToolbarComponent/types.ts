@@ -1,3 +1,4 @@
+import type { VNode } from "vue"
 import { type CanvasCallback } from "../CanvasComponent/types"
 export interface tool {
   id: number
@@ -5,6 +6,7 @@ export interface tool {
   icon: string
   canvasCallbacks: Array<CanvasCallback>
   cursor?: string
+  pane?: VNode
 }
 
 const exampleTools: Array<tool> = [{

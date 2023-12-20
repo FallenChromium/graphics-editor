@@ -40,7 +40,9 @@
             </div>
           </div>
         </div>
-        <LineToolPane></LineToolPane>
+        <ToolPane :pane_name="tools[selectedTool].name">
+          <component :is="tools[selectedTool].pane"></component>
+        </ToolPane>
       </div>
     </div>
   </div>
@@ -49,12 +51,14 @@
 <script setup lang="ts">
 import ToolbarComponent from '@/components/ToolbarComponent/ToolbarComponent.vue';
 import CanvasComponent from '@/components/CanvasComponent/CanvasComponent.vue';
+import ToolPane from '@/components/ToolPane.vue';
 import LineToolPane from '@/geometry/line/LineToolPane.vue';
-import { onMounted, ref, type Ref } from 'vue'
+import { h, onMounted, ref, type VNode, type Ref } from 'vue'
 import type { tool } from '@/components/ToolbarComponent/types';
 import { lineClickHandler } from '@/geometry/line'
-import { ellipseClickHandler } from '@/geometry/bi_curves'
+import { ellipseClickHandler, hyperbolaClickHandler, parabolaClickHandler } from '@/geometry/bi_curves'
 import { useCanvasStore } from '@/stores/canvas'
+import BiCurveToolPane from '@/geometry/bi_curves/BiCurveToolPane.vue';
 const canvasStore = useCanvasStore()
 const { setDrawingCtx, setPreviewCtx } = canvasStore
 
@@ -65,22 +69,28 @@ const tools: Array<tool> = [
     id: 2, name: 'Line', icon: 'vector-line', canvasCallbacks: [
       {
         event: 'click', callback: lineClickHandler
-      }]
+      }],
+    pane: h(LineToolPane)
   },
   {
-    id: 3, name: 'Bi curves', icon: 'vector-ellipse', canvasCallbacks: [
+    id: 3, name: 'Ellipse', icon: 'vector-ellipse', canvasCallbacks: [
       { event: 'click', callback: ellipseClickHandler },
     ]
   },
   {
-    id: 4, name: 'Rectangle', icon: 'rectangle', canvasCallbacks: [
-      { event: 'click', callback: () => {} },
-    ]
-  }
+    id: 4, name: 'Hyperbola', icon: 'chat-bell-curve-cumulative', canvasCallbacks: [
+      { event: 'click', callback: hyperbolaClickHandler },
+    ],
+    pane: h(BiCurveToolPane)
+  },
+  {
+    id: 5, name: 'Parabola', icon: 'shape', canvasCallbacks: [
+      { event: 'click', callback: parabolaClickHandler}],
+      pane: h(BiCurveToolPane)
+  },
   // { id: 3, name: 'Paint Bucket', icon: 'format-color-fill', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
   // { id: 4, name: 'Crop', icon: 'crop', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
   // { id: 5, name: 'Eraser', icon: 'eraser', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
-  // { id: 7, name: 'Shape', icon: 'shape', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
   // { id: 8, name: 'Text', icon: 'format-text', cursor: 'text', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] }
 ]
 

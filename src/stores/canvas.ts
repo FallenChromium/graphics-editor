@@ -1,6 +1,5 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import CanvasComponent from '@/components/CanvasComponent/CanvasComponent.vue';
 
 export const useCanvasStore = defineStore('canvas', () => {
   const drawingCtx = ref<CanvasRenderingContext2D|undefined>(undefined)

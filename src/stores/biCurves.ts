@@ -5,6 +5,7 @@ export const useBiCurveStore = defineStore('biCurves', () => {
   const origin = ref<{ x: number; y: number; z: number; w: number }>({ x: 0, y: 0, z: 0, w: 1 })
   const ellipseA = ref<number>(0);
   const ellipseB = ref<number>(0);
+  const direction = ref<"Horizontal" | "Vertical">("Horizontal");
 
   function switchDrawing() {
     isDrawing.value = !isDrawing.value
@@ -28,5 +29,5 @@ export const useBiCurveStore = defineStore('biCurves', () => {
 //   function setAlgoType(algo: drawingFunctionsTypes) {
 //     algoType.value = algo
 //   }
-  return { isDrawing, origin, setOrigin, setEllipseA, setEllipseB, toggleDrawing, ellipseA, ellipseB, switchDrawing }
+  return { isDrawing, origin, setOrigin, setEllipseA, setEllipseB, toggleDrawing, ellipseA, ellipseB, switchDrawing, direction }
 })
