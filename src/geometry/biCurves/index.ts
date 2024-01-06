@@ -10,9 +10,9 @@ export class Ellipse {
   _a: number;
   _b: number;
   constructor(origin: Point, a: number, b: number) {
-      this._origin = new Point(origin.x, origin.y, origin.z);
-      this._a = a;
-      this._b = b;
+    this._origin = new Point(origin.x, origin.y, origin.z);
+    this._a = a;
+    this._b = b;
   }
 
   get origin() { return new Point(this._origin.x, this._origin.y, this._origin.z); }
@@ -26,10 +26,10 @@ export class Hyperbola {
   _b: number;
   _isHorizontal: boolean;
   constructor(origin: Point, a: number, b: number, isHorizontal: boolean) {
-      this._origin = new Point(origin.x, origin.y, origin.z);
-      this._a = a;
-      this._b = b;
-      this._isHorizontal = isHorizontal;
+    this._origin = new Point(origin.x, origin.y, origin.z);
+    this._a = a;
+    this._b = b;
+    this._isHorizontal = isHorizontal;
   }
 
   get origin() { return new Point(this._origin.x, this._origin.y, this._origin.z); }
@@ -43,9 +43,9 @@ export class Parabola {
   _p: number;
   _isHorizontal: boolean;
   constructor(vertex: Point, p: number, isHorizontal: boolean) {
-      this._vertex = new Point(vertex.x, vertex.y, vertex.z);
-      this._p  = p;
-      this._isHorizontal = isHorizontal;
+    this._vertex = new Point(vertex.x, vertex.y, vertex.z);
+    this._p = p;
+    this._isHorizontal = isHorizontal;
   }
 
   get vertex() { return new Point(this._vertex.x, this._vertex.y, this._vertex.z); }
@@ -62,7 +62,8 @@ function _ellipse(origin: Point, a: number, b: number): Point[] {
 
   let currX = 0
   let currY = b
-  if (a > 10 && b > 10) {
+  // TODO: too many points being drawn if there's no limit, should be capped not by the dimensions but by the viewport size
+  if (a > 5 && b > 5) {
     do {
       points_quadrant1.push(new Point(currX + origin.x, currY + origin.y))
 
@@ -102,16 +103,22 @@ const biCurveStore = useBiCurveStore(pinia)
 const { origin, isDrawing, direction } = storeToRefs(biCurveStore)
 const { setOrigin, switchDrawing } = biCurveStore
 
-function ellipseMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
-  const canvasStore = useCanvasStore(pinia)
-  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
-  const ctx = previewCtx.value!
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+function drawEllipse(ctx: CanvasRenderingContext2D, e: MouseEvent) {
   const { x, y, z, w } = origin.value
+  let a, b = 0
+  if (e.shiftKey) {
+    const max = Math.max(e.offsetX - origin.value.x, e.offsetY - origin.value.y)
+    a = max
+    b = max
+  }
+  else {
+    a = e.offsetX - origin.value.x
+    b = e.offsetY - origin.value.y
+  }
   const points = _ellipse(
     new Point(x, y, z, w),
-    e.offsetX - origin.value.x,
-    e.offsetY - origin.value.y
+    a,
+    b
   )
   points.forEach((point) => {
     ctx.fillStyle = 'rgba(0, 0, 0, ' + w + ')'
@@ -119,67 +126,65 @@ function ellipseMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
   })
 }
 
+function ellipseMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
+  const canvasStore = useCanvasStore(pinia)
+  const { previewCtx } = storeToRefs(canvasStore)
+  const ctx = previewCtx.value!
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  drawEllipse(ctx, e)
+}
+
 export function ellipseClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
   const canvasStore = useCanvasStore(pinia)
-  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
+  const { drawingCtx } = storeToRefs(canvasStore)
   if (!isDrawing.value) {
     setOrigin(e.offsetX, e.offsetY)
     this.addEventListener('mousemove', ellipseMoveHandler)
   } else {
     this.removeEventListener('mousemove', ellipseMoveHandler)
     const ctx = drawingCtx.value!
-    const { x, y, z, w } = origin.value
-    const points = _ellipse(
-      new Point(x, y, z, w),
-      e.offsetX - origin.value.x,
-      e.offsetY - origin.value.y
-    )
-    points.forEach((point) => {
-      ctx.fillStyle = 'rgba(0, 0, 0, ' + w + ')'
-      ctx.fillRect(point.x, point.y, 1, 1)
-    })
+    drawEllipse(ctx, e)
+    switchDrawing()
   }
-  switchDrawing()
 }
 
 function _horizontalParabolaPointError(x: number, y: number, p: number): number {
   return Math.abs(y ** 2 / x - p)
 }
 
+// TODO: merge horizontal and vertical parabola functions since they're not that different
 function _horizontalParabola(
   vertex: Point,
   p: number,
   Xlimit = 3000 - vertex.x,
   Ylimit = 3000 - vertex.y
 ) {
-  const points_upperHalf = []
+  const abs_p = Math.abs(p)
+  let points_upperHalf = []
 
   let currX = 0
   let currY = 0
   do {
     points_upperHalf.push(new Point(currX + vertex.x, currY + vertex.y))
 
-    const horizontalPixelError = _horizontalParabolaPointError(currX + 1, currY, p)
-    const verticalPixelError = _horizontalParabolaPointError(currX, currY + 1, p)
-    const diagonalPixelError = _horizontalParabolaPointError(currX + 1, currY + 1, p)
+    const horizontalPixelError = _horizontalParabolaPointError(currX + 1, currY, abs_p)
+    const verticalPixelError = _horizontalParabolaPointError(currX, currY + 1, abs_p)
+    const diagonalPixelError = _horizontalParabolaPointError(currX + 1, currY + 1, abs_p)
     const minimalError = Math.min(horizontalPixelError, verticalPixelError, diagonalPixelError)
 
     if (minimalError === horizontalPixelError) {
-      Math.sign(p) == 1 ? currX++ : currX++ 
+      currX++
     } else if (minimalError === verticalPixelError) {
-      Math.sign(p) == 1 ? currY++ : currY-- 
+      currY++
     } else {
-      if (Math.sign(p) == 1) {
-        currX++
-        currY++
-      }
-      else {
-        currX--
-        currY--
-      }
+      currX++
+      currY++
     }
   } while (currX < Xlimit && currY < Ylimit)
-
+  if (Math.sign(p) === -1) {
+    const VerticalVertexAxis = new Line(vertex, new Point(vertex.x,vertex.y+1))
+    points_upperHalf = points_upperHalf.map((point) => point.reflectAlongLine(VerticalVertexAxis))
+  }
   const parabolaAxis = new Line(vertex, new Point(vertex.x + 1, vertex.y))
   const points_lowerHalf = points_upperHalf.map((point) => point.reflectAlongLine(parabolaAxis))
 
@@ -187,6 +192,7 @@ function _horizontalParabola(
 }
 
 function _verticalParabolaPointError(x: number, y: number, p: number) {
+  // error value with a sign isn't used anyway since it is only compared to 0 to determine the minimal error
   return Math.abs(x ** 2 / y - p)
 }
 
@@ -197,16 +203,17 @@ function _verticalParabola(
   Xlimit = 3000 - vertex.x,
   Ylimit = 3000 - vertex.y
 ) {
-  const points_rightHalf = []
+  const abs_p = Math.abs(p)
+  let points_rightHalf = []
 
   let currX = 0
   let currY = 0
   do {
     points_rightHalf.push(new Point(currX + vertex.x, currY + vertex.y))
 
-    const horizontalPixelError = _verticalParabolaPointError(currX + 1, currY, p)
-    const verticalPixelError = _verticalParabolaPointError(currX, currY + 1, p)
-    const diagonalPixelError = _verticalParabolaPointError(currX + 1, currY + 1, p)
+    const horizontalPixelError = _verticalParabolaPointError(currX + 1, currY, abs_p)
+    const verticalPixelError = _verticalParabolaPointError(currX, currY + 1, abs_p)
+    const diagonalPixelError = _verticalParabolaPointError(currX + 1, currY + 1, abs_p)
     const minimalError = Math.min(horizontalPixelError, verticalPixelError, diagonalPixelError)
 
     if (minimalError === horizontalPixelError) {
@@ -219,50 +226,50 @@ function _verticalParabola(
     }
   } while (currX < Xlimit && currY < Ylimit)
 
+  if (p < 0) {
+    const verticalAxis = new Line(vertex, new Point(vertex.x + 1, vertex.y))
+    points_rightHalf = points_rightHalf.map((point) => point.reflectAlongLine(verticalAxis))
+  }
   const parabolaAxis = new Line(vertex, new Point(vertex.x, vertex.y + 1))
   const points_leftHalf = points_rightHalf.map((point) => point.reflectAlongLine(parabolaAxis))
 
   return [...points_leftHalf, ...points_rightHalf]
 }
 
-function parabolaMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
-  const canvasStore = useCanvasStore(pinia)
-  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
-  const ctx = previewCtx.value!
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+function drawParabola(ctx: CanvasRenderingContext2D, e: MouseEvent) {
   const { x, y, z, w } = origin.value
-  const points = (direction.value == 'Horizontal' ?
-  _horizontalParabola : _verticalParabola)
-  (new Point(x, y, z, w), 
-  direction.value == 'Horizontal' ? 
-    Math.sign(e.offsetX-origin.value.x) * e.offsetY - origin.value.y : 
-    Math.sign(e.offsetY-origin.value.y) * e.offsetX - origin.value.x)
+  const drawingFunction = direction.value == 'Horizontal' ?
+  _horizontalParabola : _verticalParabola
+  const points = drawingFunction
+    (new Point(x, y, z, w),
+      direction.value == 'Horizontal' ?
+        // multiply by the sign of the other variable
+        e.offsetX - origin.value.x :
+        e.offsetY - origin.value.y)
   points.forEach((point) => {
     ctx.fillStyle = 'rgba(0, 0, 0, ' + w + ')'
     ctx.fillRect(point.x, point.y, 1, 1)
   })
 }
 
+function parabolaMoveHandler(e: MouseEvent) {
+  const canvasStore = useCanvasStore(pinia)
+  const { previewCtx } = storeToRefs(canvasStore)
+  const ctx = previewCtx.value!
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  drawParabola(ctx, e)
+}
+
 export function parabolaClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
   const canvasStore = useCanvasStore(pinia)
-  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
+  const { drawingCtx } = storeToRefs(canvasStore)
   if (!isDrawing.value) {
     setOrigin(e.offsetX, e.offsetY)
     this.addEventListener('mousemove', parabolaMoveHandler)
   } else {
     this.removeEventListener('mousemove', parabolaMoveHandler)
     const ctx = drawingCtx.value!
-    const { x, y, z, w } = origin.value
-    const points = (direction.value == 'Horizontal' ?
-    _horizontalParabola : _verticalParabola)
-    (new Point(x, y, z, w), 
-    direction.value == 'Horizontal' ? 
-      Math.sign(e.offsetX-origin.value.x) * e.offsetY - origin.value.y : 
-      Math.sign(e.offsetY-origin.value.y) * e.offsetX - origin.value.x)
-    points.forEach((point) => {
-      ctx.fillStyle = 'rgba(0, 0, 0, ' + w + ')'
-      ctx.fillRect(point.x, point.y, 1, 1)
-    })
+    drawParabola(ctx, e)
   }
   switchDrawing()
 }
@@ -357,49 +364,49 @@ function _verticalHyperbola(origin: Point, a: number, b: number, Xlimit = 3000, 
 function hyperbolaMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
   const canvasStore = useCanvasStore(pinia)
   const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
-    const ctx = previewCtx.value!
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  const ctx = previewCtx.value!
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  const { x, y, z, w } = origin.value
+  const points =
+    (direction.value === "Horizontal" ? _horizontalHyperbola : _verticalHyperbola)
+      (
+        new Point(x, y, z, w),
+        e.offsetX - origin.value.x,
+        e.offsetY - origin.value.y
+      )
+
+  points.forEach((point) => {
+    ctx.fillStyle = 'rgba(0, 0, 0, ' + w + ')'
+    ctx.fillRect(point.x, point.y, 1, 1)
+  })
+}
+
+export function hyperbolaClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
+  const canvasStore = useCanvasStore(pinia)
+  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
+  if (!isDrawing.value) {
+    setOrigin(e.offsetX, e.offsetY)
+    this.addEventListener('mousemove', hyperbolaMoveHandler)
+  } else {
+    this.removeEventListener('mousemove', hyperbolaMoveHandler)
+    const ctx = drawingCtx.value!
     const { x, y, z, w } = origin.value
     const points =
-     (direction.value === "Horizontal" ? _horizontalHyperbola : _verticalHyperbola)
-     (
-      new Point(x, y, z, w),
-      e.offsetX - origin.value.x,
-      e.offsetY - origin.value.y
-    )
-  
-    points.forEach((point) => {
-      ctx.fillStyle = 'rgba(0, 0, 0, ' + w + ')'
-      ctx.fillRect(point.x, point.y, 1, 1)
-    })
-  }
-  
-  export function hyperbolaClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
-    const canvasStore = useCanvasStore(pinia)
-    const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
-    if (!isDrawing.value) {
-      setOrigin(e.offsetX, e.offsetY)
-      this.addEventListener('mousemove', hyperbolaMoveHandler)
-    } else {
-      this.removeEventListener('mousemove', hyperbolaMoveHandler)
-      const ctx = drawingCtx.value!
-      const { x, y, z, w } = origin.value
-      const points =
       (direction.value === "Horizontal" ? _horizontalHyperbola : _verticalHyperbola)
-      (
-       new Point(x, y, z, w),
-       e.offsetX - origin.value.x,
-       e.offsetY - origin.value.y
-     )
-  
+        (
+          new Point(x, y, z, w),
+          e.offsetX - origin.value.x,
+          e.offsetY - origin.value.y
+        )
+
     points.forEach((point) => {
       ctx.fillStyle = 'rgba(0, 0, 0, ' + w + ')'
       ctx.fillRect(point.x, point.y, 1, 1)
     })
-    }
-    switchDrawing()
   }
-  
+  switchDrawing()
+}
+
 
 function _exitEllipseDrawingMode(selectedPoints: Point[]) {
   const origin = new Point(selectedPoints[0].x, selectedPoints[0].y)
