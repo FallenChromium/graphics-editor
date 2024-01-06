@@ -98,7 +98,7 @@ hermiteMatrix.setElements([
   [1, 0, 0, 0]
 ])
 
-const bezierMatrix = new Matrix(4, 4)
+export const bezierMatrix = new Matrix(4, 4)
 bezierMatrix.setElements([
   [-1, 3, -3, 1],
   [3, -6, 3, 0],
@@ -106,8 +106,8 @@ bezierMatrix.setElements([
   [1, 0, 0, 0]
 ])
 
-const vSplineMatrix = new Matrix(4, 4)
-vSplineMatrix.setElements([
+export const bSplineMatrix = new Matrix(4, 4)
+bSplineMatrix.setElements([
   [-1 / 6, 1 / 2, -1 / 2, 1 / 6],
   [1 / 2, -1, 1 / 2, 0],
   [-1 / 2, 0, 1 / 2, 0],

@@ -1,7 +1,14 @@
-import type { LineSegment } from "@/geometry/line";
+import type { BSpline, BezierCurve, HermiteCurve, LineSegment } from "@/components/CanvasComponent/types";
 import { Arc, Graph, GraphNode } from "@/graph_theory";
 import { Polygon } from "@/geometry/polygon"
+import type { Point } from "../point";
 
+import { useCanvasStore } from "@/stores/canvas";
+import { pinia } from "@/stores";
+import { storeToRefs } from "pinia";
+
+const canvasStore = useCanvasStore(pinia)
+const { hermiteCurves, bezierCurves, bSplines } = storeToRefs(canvasStore)
 export function radiansToDegrees(radians: number) {
     return Math.round(radians * 180 / Math.PI);
 }
@@ -82,4 +89,31 @@ export function getPolygons(lineSegments: LineSegment[]) {
     })
 
     return polygons;
+}
+
+export function getClosestReferencePointToPoint(point: Point, includeBSplines = true) {
+    let closestCurve = null;
+    let currMinDistance = Infinity;
+    let referencePointInCurveIndex = null;
+
+    const curves: Array<HermiteCurve|BezierCurve|BSpline> = [
+        ...hermiteCurves.value,
+        ...bezierCurves.value,
+        ...(includeBSplines ? bSplines.value : [])
+    ];
+
+    for (const curve of curves) {
+        const distancesToPoint = curve.referencePoints.map(referencePoint => referencePoint.distanceToPoint(point));
+        const minDistance = Math.min(...distancesToPoint);
+        if (minDistance < currMinDistance) {
+            closestCurve = curve;
+            currMinDistance = minDistance;
+            referencePointInCurveIndex = curve.referencePoints.findIndex(referencePoint => referencePoint.distanceToPoint(point) === minDistance);
+        }
+    }
+
+    return {
+        closestCurve,
+        referencePointInCurveIndex
+    }
 }

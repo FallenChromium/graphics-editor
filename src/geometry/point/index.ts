@@ -49,6 +49,10 @@ export class Point {
         return this.reflect(line.closestOwnPointToPoint(this));
     }
 
+    distanceToPoint(point: Point) {
+        return new Vector(this, point).modulus;
+    }
+
     applyMatrix(matrix: Matrix) { // matrix has to be 4x4!
         return new Point(
             this._x * matrix.getElementAt(1, 1) + this._y * matrix.getElementAt(1, 2) + this._z * matrix.getElementAt(1, 3) + this._w * matrix.getElementAt(1, 4),

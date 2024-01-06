@@ -51,15 +51,21 @@
 <script setup lang="ts">
 import ToolbarComponent from '@/components/ToolbarComponent/ToolbarComponent.vue';
 import CanvasComponent from '@/components/CanvasComponent/CanvasComponent.vue';
+
 import ToolPane from '@/components/ToolPane.vue';
 import LineToolPane from '@/geometry/line/LineToolPane.vue';
-import { h, onMounted, ref, type VNode, type Ref } from 'vue'
+import BiCurveToolPane from '@/geometry/biCurves/BiCurveToolPane.vue';
+import CurveToolPane from '@/geometry/curves/CurveToolPane.vue'
+import { h, onMounted, ref, type Ref } from 'vue'
 import type { tool } from '@/components/ToolbarComponent/types';
+
 import { lineClickHandler } from '@/geometry/line'
-import { ellipseClickHandler, hyperbolaClickHandler, parabolaClickHandler } from '@/geometry/bi_curves'
+import { ellipseClickHandler, hyperbolaClickHandler, parabolaClickHandler } from '@/geometry/biCurves'
+import { CurveClickHandler, drawCurve } from '@/geometry/curves/index'
 import { useCanvasStore } from '@/stores/canvas'
-import BiCurveToolPane from '@/geometry/bi_curves/BiCurveToolPane.vue';
-const canvasStore = useCanvasStore()
+import { pinia } from '@/stores'
+
+const canvasStore = useCanvasStore(pinia)
 const { setDrawingCtx, setPreviewCtx } = canvasStore
 
 const tools: Array<tool> = [
@@ -78,7 +84,7 @@ const tools: Array<tool> = [
     ]
   },
   {
-    id: 4, name: 'Hyperbola', icon: 'chat-bell-curve-cumulative', canvasCallbacks: [
+    id: 4, name: 'Hyperbola', icon: 'chart-bell-curve-cumulative', canvasCallbacks: [
       { event: 'click', callback: hyperbolaClickHandler },
     ],
     pane: h(BiCurveToolPane)
@@ -88,8 +94,11 @@ const tools: Array<tool> = [
       { event: 'click', callback: parabolaClickHandler}],
       pane: h(BiCurveToolPane)
   },
+  { id: 6, name: 'Curve', icon: 'vector-curve', canvasCallbacks: [
+    { event: 'click', callback: CurveClickHandler }, { event: 'contextmenu', callback: drawCurve }],
+    pane: h(CurveToolPane) 
+  },
   // { id: 3, name: 'Paint Bucket', icon: 'format-color-fill', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
-  // { id: 4, name: 'Crop', icon: 'crop', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
   // { id: 5, name: 'Eraser', icon: 'eraser', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
   // { id: 8, name: 'Text', icon: 'format-text', cursor: 'text', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] }
 ]
