@@ -5,11 +5,53 @@ import { pinia } from '@/stores'
 import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
 
-const biCurveStore = useBiCurveStore(pinia)
-const { origin, isDrawing, direction } = storeToRefs(biCurveStore)
-const { setOrigin, switchDrawing } = biCurveStore
-const canvasStore = useCanvasStore(pinia)
-const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
+export class Ellipse {
+  _origin: Point;
+  _a: number;
+  _b: number;
+  constructor(origin: Point, a: number, b: number) {
+      this._origin = new Point(origin.x, origin.y, origin.z);
+      this._a = a;
+      this._b = b;
+  }
+
+  get origin() { return new Point(this._origin.x, this._origin.y, this._origin.z); }
+  get a() { return this._a; }
+  get b() { return this._b; }
+}
+
+export class Hyperbola {
+  _origin: Point;
+  _a: number;
+  _b: number;
+  _isHorizontal: boolean;
+  constructor(origin: Point, a: number, b: number, isHorizontal: boolean) {
+      this._origin = new Point(origin.x, origin.y, origin.z);
+      this._a = a;
+      this._b = b;
+      this._isHorizontal = isHorizontal;
+  }
+
+  get origin() { return new Point(this._origin.x, this._origin.y, this._origin.z); }
+  get a() { return this._a; }
+  get b() { return this._b; }
+  get isHorizontal() { return this._isHorizontal; }
+}
+
+export class Parabola {
+  _vertex: Point;
+  _p: number;
+  _isHorizontal: boolean;
+  constructor(vertex: Point, p: number, isHorizontal: boolean) {
+      this._vertex = new Point(vertex.x, vertex.y, vertex.z);
+      this._p  = p;
+      this._isHorizontal = isHorizontal;
+  }
+
+  get vertex() { return new Point(this._vertex.x, this._vertex.y, this._vertex.z); }
+  get p() { return this._p; }
+  get isHorizontal() { return this._isHorizontal; }
+}
 
 function _ellipsePointError(x: number, y: number, a: number, b: number) {
   return Math.abs(x ** 2 / a ** 2 + y ** 2 / b ** 2 - 1)
@@ -55,7 +97,14 @@ function _ellipse(origin: Point, a: number, b: number): Point[] {
   return [...points_quadrant1, ...points_quadrant2, ...points_quadrant3, ...points_quadrant4]
 }
 
+
+const biCurveStore = useBiCurveStore(pinia)
+const { origin, isDrawing, direction } = storeToRefs(biCurveStore)
+const { setOrigin, switchDrawing } = biCurveStore
+
 function ellipseMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
+  const canvasStore = useCanvasStore(pinia)
+  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
   const ctx = previewCtx.value!
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
   const { x, y, z, w } = origin.value
@@ -71,6 +120,8 @@ function ellipseMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
 }
 
 export function ellipseClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
+  const canvasStore = useCanvasStore(pinia)
+  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
   if (!isDrawing.value) {
     setOrigin(e.offsetX, e.offsetY)
     this.addEventListener('mousemove', ellipseMoveHandler)
@@ -114,12 +165,18 @@ function _horizontalParabola(
     const minimalError = Math.min(horizontalPixelError, verticalPixelError, diagonalPixelError)
 
     if (minimalError === horizontalPixelError) {
-      currX++
+      Math.sign(p) == 1 ? currX++ : currX++ 
     } else if (minimalError === verticalPixelError) {
-      currY++
+      Math.sign(p) == 1 ? currY++ : currY-- 
     } else {
-      currX++
-      currY++
+      if (Math.sign(p) == 1) {
+        currX++
+        currY++
+      }
+      else {
+        currX--
+        currY--
+      }
     }
   } while (currX < Xlimit && currY < Ylimit)
 
@@ -169,13 +226,17 @@ function _verticalParabola(
 }
 
 function parabolaMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
+  const canvasStore = useCanvasStore(pinia)
+  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
   const ctx = previewCtx.value!
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
   const { x, y, z, w } = origin.value
-  const points = (direction.value == 'Horizontal' ? _horizontalParabola : _verticalParabola)(
-    new Point(x, y, z, w),
-    e.offsetX - origin.value.x
-  )
+  const points = (direction.value == 'Horizontal' ?
+  _horizontalParabola : _verticalParabola)
+  (new Point(x, y, z, w), 
+  direction.value == 'Horizontal' ? 
+    Math.sign(e.offsetX-origin.value.x) * e.offsetY - origin.value.y : 
+    Math.sign(e.offsetY-origin.value.y) * e.offsetX - origin.value.x)
   points.forEach((point) => {
     ctx.fillStyle = 'rgba(0, 0, 0, ' + w + ')'
     ctx.fillRect(point.x, point.y, 1, 1)
@@ -183,6 +244,8 @@ function parabolaMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
 }
 
 export function parabolaClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
+  const canvasStore = useCanvasStore(pinia)
+  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
   if (!isDrawing.value) {
     setOrigin(e.offsetX, e.offsetY)
     this.addEventListener('mousemove', parabolaMoveHandler)
@@ -190,12 +253,18 @@ export function parabolaClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
     this.removeEventListener('mousemove', parabolaMoveHandler)
     const ctx = drawingCtx.value!
     const { x, y, z, w } = origin.value
-    const points = (direction.value == 'Horizontal' ? _horizontalParabola : _verticalParabola)(new Point(x, y, z, w), e.offsetX - origin.value.x)
+    const points = (direction.value == 'Horizontal' ?
+    _horizontalParabola : _verticalParabola)
+    (new Point(x, y, z, w), 
+    direction.value == 'Horizontal' ? 
+      Math.sign(e.offsetX-origin.value.x) * e.offsetY - origin.value.y : 
+      Math.sign(e.offsetY-origin.value.y) * e.offsetX - origin.value.x)
     points.forEach((point) => {
       ctx.fillStyle = 'rgba(0, 0, 0, ' + w + ')'
       ctx.fillRect(point.x, point.y, 1, 1)
     })
   }
+  switchDrawing()
 }
 
 function _verticalHyperbolaPointError(x: number, y: number, a: number, b: number) {
@@ -286,6 +355,8 @@ function _verticalHyperbola(origin: Point, a: number, b: number, Xlimit = 3000, 
 }
 
 function hyperbolaMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
+  const canvasStore = useCanvasStore(pinia)
+  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
     const ctx = previewCtx.value!
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
     const { x, y, z, w } = origin.value
@@ -304,6 +375,8 @@ function hyperbolaMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
   }
   
   export function hyperbolaClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
+    const canvasStore = useCanvasStore(pinia)
+    const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
     if (!isDrawing.value) {
       setOrigin(e.offsetX, e.offsetY)
       this.addEventListener('mousemove', hyperbolaMoveHandler)

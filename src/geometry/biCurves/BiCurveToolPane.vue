@@ -7,8 +7,7 @@
 
 <script setup lang="ts">
 import { useBiCurveStore } from '@/stores/biCurves';
-import { useLineStore } from '@/stores/line';
 import { storeToRefs } from 'pinia';
-const lineStore = useBiCurveStore();
-const { direction } = storeToRefs(lineStore);
+const biCurveStore = useBiCurveStore();
+const { direction } = storeToRefs(biCurveStore);
 </script>
