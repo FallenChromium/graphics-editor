@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia'
 
 const curveStore = useCurveStore(pinia)
 const { algoType, points, isDrawing } = storeToRefs(curveStore)
-const { addPoint, wipePoints } = curveStore
+const { addPoint, wipePoints, setDrawing } = curveStore
 
 import { useCanvasStore } from '@/stores/canvas'
 import { Matrix, bSplineMatrix, bezierMatrix, hermiteMatrix } from '@/linear_algebra/matrix'
@@ -19,9 +19,9 @@ const {
 } = canvasStore
 const { previewCtx, drawingCtx } = storeToRefs(canvasStore)
 
-export function curveClickHandler() {}
+export function curveClickHandler() { }
 
-export function curveMoveHandler() {}
+export function curveMoveHandler() { }
 
 function _getXtAndYtFromCoefficients(coefficients: Matrix) {
   function x_t(t: number) {
@@ -45,47 +45,46 @@ function _getXtAndYtFromCoefficients(coefficients: Matrix) {
   return [x_t, y_t]
 }
 
-function hermitCurve(P1: Point, P4: Point, R1: Point, R4: Point, tStep = 0.001) {
-  const points = []
+// function hermitCurve(P1: Point, P4: Point, R1: Point, R4: Point, tStep = 0.001) {
+//   const points = []
 
-  const coordinateMatrix = new Matrix(4, 2)
-  coordinateMatrix.setElements([
-    [P1.x, P1.y],
-    [P4.x, P4.y],
-    [R1.x, R1.y],
-    [R4.x, R4.y]
-  ])
-  const coefficients = hermiteMatrix.multiply(coordinateMatrix)
-  const [x, y] = _getXtAndYtFromCoefficients(coefficients)
+//   const coordinateMatrix = new Matrix(4, 2)
+//   coordinateMatrix.setElements([
+//     [P1.x, P1.y],
+//     [P4.x, P4.y],
+//     [R1.x, R1.y],
+//     [R4.x, R4.y]
+//   ])
+//   const coefficients = hermiteMatrix.multiply(coordinateMatrix)
+//   const [x, y] = _getXtAndYtFromCoefficients(coefficients)
 
-  for (let t = 0; t <= 1; t += tStep) {
-    points.push(new Point(x(t), y(t)))
-  }
+//   for (let t = 0; t <= 1; t += tStep) {
+//     points.push(new Point(x(t), y(t)))
+//   }
 
-  return points
-}
+//   return points
+// }
 
 function bezierCurve(P1: Point, P2: Point, P3: Point, P4: Point, tStep = 0.001) {
   const points = [];
 
-            const coordinateMatrix = new Matrix(4, 2);
-            coordinateMatrix.setElements([
-                [P1.x, P1.y],
-                [P2.x, P2.y],
-                [P3.x, P3.y],
-                [P4.x, P4.y]
-            ]);
-            const coefficients = bezierMatrix.multiply(coordinateMatrix);
-            const [x, y] = _getXtAndYtFromCoefficients(coefficients);
+  const coordinateMatrix = new Matrix(4, 2);
+  coordinateMatrix.setElements([
+    [P1.x, P1.y],
+    [P2.x, P2.y],
+    [P3.x, P3.y],
+    [P4.x, P4.y]
+  ]);
+  const coefficients = bezierMatrix.multiply(coordinateMatrix);
+  const [x, y] = _getXtAndYtFromCoefficients(coefficients);
 
-            for (let t = 0; t <= 1; t += tStep) {
-                points.push(new Point(x(t), y(t)));
-            }
+  for (let t = 0; t <= 1; t += tStep) {
+    points.push(new Point(x(t), y(t)));
+  }
 
-            return points;
+  return points;
 }
 
-function bsplineCurve(P1: Point, P2: Point, P3: Point, P4: Point, tStep = 0.001) {}
 
 function bSplineSegment(P1: Point, P2: Point, P3: Point, P4: Point, tStep = 0.001) {
   const points = []
@@ -142,9 +141,9 @@ function lookForSegmentToConnect(selectedPoints: Point) {
         for (const otherCurveEndpoint of allEndpoints) {
           if (
             currCurveEndpoint.distanceToPoint(otherCurveEndpoint) <=
-              segmentConnectingSnapDistance &&
+            segmentConnectingSnapDistance &&
             mousePosition.distanceToPoint(otherCurveEndpoint) <=
-              segmentConnectingMouseForceUnsnapDistance
+            segmentConnectingMouseForceUnsnapDistance
           ) {
             const diffX = otherCurveEndpoint.x - currCurveEndpoint.x
             const diffY = otherCurveEndpoint.y - currCurveEndpoint.y
@@ -178,26 +177,31 @@ function lookForSegmentToConnect(selectedPoints: Point) {
 
 export function drawCurve(e: MouseEvent) {
   e.preventDefault()
-    isDrawing.value = false
-    let curvePoints: Point[] = []
-    if (points.value.length >= 3) {
-      if (algoType.value === 'Bezier') {
-        curvePoints = bezierCurve()
-      } else if (algoType.value === 'B-Spline') {
-        curvePoints = bSpline(points.value)
+  setDrawing(false)
+  let curvePoints: Point[] = []
+  if (points.value.length >= 3) {
+    if (algoType.value === 'Bezier') {
+      if (points.value.length === 4) {
+        curvePoints = bezierCurve(points.value[0], points.value[1], points.value[2], points.value[3])
       }
-      for (const point of curvePoints) {
-        drawingCtx.value?.fillRect(point.x, point.y, 1, 1)
+      else {
+        curvePoints = bezierCurve(points.value[0], points.value[1], points.value[2], points.value[0])
       }
+    } else if (algoType.value === 'B-Spline') {
+      curvePoints = bSpline(points.value)
     }
-    wipePoints()
+    for (const point of curvePoints) {
+      drawingCtx.value?.fillRect(point.x, point.y, 1, 1)
+    }
+  }
+  wipePoints()
 }
 
 export function CurveClickHandler(e: MouseEvent) {
-    if (!isDrawing.value) {
-      isDrawing.value = true
-    }
-    addPoint(new Point(e.offsetX, e.offsetY, 0, 1))
+  if (!isDrawing) {
+    setDrawing(true)
+  }
+  addPoint(new Point(e.offsetX, e.offsetY, 0, 1))
 }
 
-export function CurveMoveHandler() {}
+export function CurveMoveHandler() { }

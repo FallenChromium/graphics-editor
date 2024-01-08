@@ -18,6 +18,14 @@ export const useCurveStore = defineStore('curves', () => {
   function wipePoints() {
     points.value = []
   }
-  return { addPoint, points, algoType, isDrawing, wipePoints }
+
+  function setAlgoType(type: CurveType) {
+    algoType.value = type
+  }
+
+  function setDrawing(state: boolean) {
+    isDrawing.value = state
+  }
+  return { addPoint, points, algoType, isDrawing, wipePoints, setAlgoType, setDrawing }
 })
 
