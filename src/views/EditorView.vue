@@ -64,10 +64,11 @@ import { ellipseClickHandler, hyperbolaClickHandler, parabolaClickHandler } from
 import { CurveClickHandler, drawCurve } from '@/geometry/curves/index'
 import { useCanvasStore } from '@/stores/canvas'
 import { pinia } from '@/stores'
+import { storeToRefs } from 'pinia';
 
 const canvasStore = useCanvasStore(pinia)
-const { setDrawingCtx, setPreviewCtx } = canvasStore
-
+const { setDrawingCtx, setPreviewCtx, addLayer: addLayerState } = canvasStore
+const { selectedLayer } = storeToRefs(canvasStore)
 const tools: Array<tool> = [
   { id: 0, name: 'Move', icon: 'cursor-move', cursor: 'move', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
   { id: 1, name: 'Select', icon: 'select-drag', cursor: 'crosshair', canvasCallbacks: [{ event: 'mouseup', callback: () => { } }, { event: 'mousedown', callback: () => { } }, { event: 'mousemove', callback: () => { } }] },
@@ -153,7 +154,9 @@ const layers = ref<Array<layer>>([{
   canvas: ref(undefined),
   visible: true
 }])
-const selectedLayer = ref<number>(1)
+
+addLayerState(0)
+addLayerState(1)
 
 const addLayer = () => {
   layers.value.push({
@@ -162,6 +165,7 @@ const addLayer = () => {
     canvas: undefined,
     visible: true
   })
+  addLayerState(layers.value.length-1)
 }
 const updateLayerVisible = (id: number) => {
   layers.value[id].visible = !layers.value[id].visible

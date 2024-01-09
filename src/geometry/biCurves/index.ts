@@ -136,6 +136,7 @@ function ellipseMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
 
 export function ellipseClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
   const canvasStore = useCanvasStore(pinia)
+  const { addEllipse } = canvasStore
   const { drawingCtx } = storeToRefs(canvasStore)
   if (!isDrawing.value) {
     setOrigin(e.offsetX, e.offsetY)
@@ -144,6 +145,7 @@ export function ellipseClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
     this.removeEventListener('mousemove', ellipseMoveHandler)
     const ctx = drawingCtx.value!
     drawEllipse(ctx, e)
+    addEllipse(new Ellipse(new Point(origin.value.x, origin.value.y, origin.value.z, origin.value.w), e.offsetX - origin.value.x, e.offsetY - origin.value.y))
     switchDrawing()
   }
 }
@@ -182,7 +184,7 @@ function _horizontalParabola(
     }
   } while (currX < Xlimit && currY < Ylimit)
   if (Math.sign(p) === -1) {
-    const VerticalVertexAxis = new Line(vertex, new Point(vertex.x,vertex.y+1))
+    const VerticalVertexAxis = new Line(vertex, new Point(vertex.x, vertex.y + 1))
     points_upperHalf = points_upperHalf.map((point) => point.reflectAlongLine(VerticalVertexAxis))
   }
   const parabolaAxis = new Line(vertex, new Point(vertex.x + 1, vertex.y))
@@ -239,11 +241,10 @@ function _verticalParabola(
 function drawParabola(ctx: CanvasRenderingContext2D, e: MouseEvent) {
   const { x, y, z, w } = origin.value
   const drawingFunction = direction.value == 'Horizontal' ?
-  _horizontalParabola : _verticalParabola
+    _horizontalParabola : _verticalParabola
   const points = drawingFunction
     (new Point(x, y, z, w),
       direction.value == 'Horizontal' ?
-        // multiply by the sign of the other variable
         e.offsetX - origin.value.x :
         e.offsetY - origin.value.y)
   points.forEach((point) => {
@@ -262,6 +263,7 @@ function parabolaMoveHandler(e: MouseEvent) {
 
 export function parabolaClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
   const canvasStore = useCanvasStore(pinia)
+  const { addParabola } = canvasStore
   const { drawingCtx } = storeToRefs(canvasStore)
   if (!isDrawing.value) {
     setOrigin(e.offsetX, e.offsetY)
@@ -271,6 +273,10 @@ export function parabolaClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
     const ctx = drawingCtx.value!
     drawParabola(ctx, e)
   }
+  addParabola(new Parabola(new Point(origin.value.x, origin.value.y, origin.value.z, 1), direction.value == 'Horizontal' ?
+    e.offsetX - origin.value.x :
+    e.offsetY - origin.value.y, 
+    direction.value == 'Horizontal'));
   switchDrawing()
 }
 
@@ -363,7 +369,7 @@ function _verticalHyperbola(origin: Point, a: number, b: number, Xlimit = 3000, 
 
 function hyperbolaMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
   const canvasStore = useCanvasStore(pinia)
-  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
+  const { previewCtx } = storeToRefs(canvasStore)
   const ctx = previewCtx.value!
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
   const { x, y, z, w } = origin.value
@@ -383,7 +389,8 @@ function hyperbolaMoveHandler(this: HTMLCanvasElement, e: MouseEvent) {
 
 export function hyperbolaClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
   const canvasStore = useCanvasStore(pinia)
-  const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
+  const { addHyperbola } = canvasStore
+  const { drawingCtx } = storeToRefs(canvasStore)
   if (!isDrawing.value) {
     setOrigin(e.offsetX, e.offsetY)
     this.addEventListener('mousemove', hyperbolaMoveHandler)
@@ -404,6 +411,7 @@ export function hyperbolaClickHandler(this: HTMLCanvasElement, e: MouseEvent) {
       ctx.fillRect(point.x, point.y, 1, 1)
     })
   }
+  addHyperbola(new Hyperbola(new Point(origin.value.x, origin.value.y, origin.value.z), e.offsetX - origin.value.x, e.offsetY - origin.value.y, direction.value === "Horizontal"))
   switchDrawing()
 }
 

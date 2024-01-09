@@ -163,6 +163,7 @@ const { isDrawing, startPoint, algoType } = storeToRefs(lineStore)
 const { setStartPoint, toggleDrawing } = lineStore
 const canvasStore = useCanvasStore(pinia)
 const { drawingCtx, previewCtx } = storeToRefs(canvasStore)
+const { addDDALineSegment, addBresenhamLineSegment, addWuLineSegment } = canvasStore
 
 export const lineDrawingFunctions = {
   DDA: drawLineDDA,
@@ -372,6 +373,20 @@ export const lineClickHandler = (e: MouseEvent) => {
     // reset the state
     setStartPoint(0, 0)
     preview.canvas.removeEventListener('mousemove', lineMoveHandler)
+    switch (algoType.value) {
+      case 'Bresenham': {
+        addBresenhamLineSegment(new LineSegment(new Point(startPoint.value.x, startPoint.value.y, 0, 1), new Point(e.offsetX,e.offsetY, 0, 1)))
+        break
+      }
+      case 'DDA': {
+        addDDALineSegment(new LineSegment(new Point(startPoint.value.x, startPoint.value.y, 0, 1), new Point(e.offsetX,e.offsetY, 0, 1)))
+        break
+      }
+      case 'Wu': {
+        addWuLineSegment(new LineSegment(new Point(startPoint.value.x, startPoint.value.y, 0, 1), new Point(e.offsetX,e.offsetY, 0, 1)))
+        break
+      }
+    }
   } else {
     console.log('START DRAWING')
     console.log(`Starting point: ${e.offsetX}, ${e.offsetY}`)

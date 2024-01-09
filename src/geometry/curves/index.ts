@@ -8,20 +8,19 @@ const { algoType, points, isDrawing } = storeToRefs(curveStore)
 const { addPoint, wipePoints, setDrawing } = curveStore
 
 import { useCanvasStore } from '@/stores/canvas'
-import { Matrix, bSplineMatrix, bezierMatrix, hermiteMatrix } from '@/linear_algebra/matrix'
+import { Matrix, bSplineMatrix, bezierMatrix } from '@/linear_algebra/matrix'
 import { getClosestReferencePointToPoint } from '../utils'
+import { BSpline, BezierCurve } from '@/components/CanvasComponent/types'
 const canvasStore = useCanvasStore(pinia)
 
 const {
   getAllCurveEndpoints,
   segmentConnectingSnapDistance,
-  segmentConnectingMouseForceUnsnapDistance
+  segmentConnectingMouseForceUnsnapDistance,
+  addBSpline,
+  addBezierCurve
 } = canvasStore
 const { previewCtx, drawingCtx } = storeToRefs(canvasStore)
-
-export function curveClickHandler() { }
-
-export function curveMoveHandler() { }
 
 function _getXtAndYtFromCoefficients(coefficients: Matrix) {
   function x_t(t: number) {
@@ -183,12 +182,14 @@ export function drawCurve(e: MouseEvent) {
     if (algoType.value === 'Bezier') {
       if (points.value.length === 4) {
         curvePoints = bezierCurve(points.value[0], points.value[1], points.value[2], points.value[3])
+        addBezierCurve(new BezierCurve([...points.value.slice(0, 4)].map((point) => new Point(point.x, point.y, point.z, 1))))
       }
       else {
-        curvePoints = bezierCurve(points.value[0], points.value[1], points.value[2], points.value[0])
+        addBezierCurve(new BezierCurve([...points.value.slice(0, 3), points.value[0]].map((point) => new Point(point.x, point.y, point.z, 1))))
       }
     } else if (algoType.value === 'B-Spline') {
       curvePoints = bSpline(points.value)
+      addBSpline(new BSpline([...points.value].map((point) => new Point(point.x, point.y, point.z, 1))))
     }
     for (const point of curvePoints) {
       drawingCtx.value?.fillRect(point.x, point.y, 1, 1)
